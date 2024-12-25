@@ -111,10 +111,10 @@ The returned DataFrame contains the following columns:
 
 > **Note**: Open an account using one of the above links and provide a screenshot to get **1 year's** of free data service(**Anyone**).
 
-- **Bison Bank**: [https://m.bison.com/#/register?invitationCode=1002](https://m.bison.com/#/register?invitationCode=1002)
-- **OKX**: [http://www.okx.com/join/80353297](http://www.okx.com/join/80353297)
-- **Bybit**: [https://partner.bybit.com/b/90899](https://partner.bybit.com/b/90899)
-- **ZFX**: [https://zfx.link/46dFByp](https://zfx.link/46dFByp)
+- **Bison Bank**: [Sign up](https://m.bison.com/#/register?invitationCode=1002)
+- **OKX**: [Sign up](http://www.okx.com/join/80353297)
+- **Bybit**: [Sign up](https://partner.bybit.com/b/90899)
+- **ZFX**: [Sign up](https://zfx.link/46dFByp)
 
 ## Examples 📝
 
