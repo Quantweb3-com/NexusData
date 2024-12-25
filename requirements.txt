@@ -1,5 +1,6 @@
-python-snappy==0.7.2
-grpcio==1.64.1
-pandas>=1.5.3
+nest_asyncio
+python-snappy
+grpcio
+pandas
 protobuf==4.25.3
 tqdm==4.65.0

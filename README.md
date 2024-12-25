@@ -141,10 +141,6 @@ plt.show()
 - tqdm >= 4.65.0
 
 ## FAQ ❓
-
-**Q: How to handle authentication errors?**  
-A: Ensure your username and token are correct, and check your network connection.
-
 **Q: What is the data update frequency?**  
 A: Minute-level data is updated in real-time, historical data is updated daily.
 
@@ -159,6 +155,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Contact 📧
 
 - Website: [quantweb3.ai](https://quantweb3.ai)
-- Email: scott2011@qq.com
+- Email: quantweb3.ai@gmail.com
 
 ## Changelog 📝
