@@ -94,7 +94,7 @@ The returned DataFrame contains the following columns:
 2. Register and obtain authentication credentials
 3. Use the `auth()` function to authenticate
 
-> Note: New users get a 7-day free trial
+> **Note: New users get a 7-day free trial**
 
 ## Examples 📝
 You can view the demo on Google Colab by clicking [here](https://colab.research.google.com/drive/1GiC43LmyWGk3S2xCmvLlGzW_1GrMgGyD?usp=sharing).
@@ -141,8 +141,11 @@ plt.show()
 - tqdm >= 4.65.0
 
 ## FAQ ❓
+**Q: How to handle authentication errors?**  
+A: Ensure your username and token are correct, and check your network connection.
+
 **Q: What is the data update frequency?**  
-A: Minute-level data is updated in real-time, historical data is updated daily.
+A: Hstorical data is updated daily.
 
 ## Contributing 🤝
 
