@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qwdataapi"
+version = "1.0.7"
+authors = [
+  { name="Scott Zhang", email="scott2011@qq.com" },
+]
+description = "Quantweb3 Data API for quants"
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  'python-snappy>=0.7.2',
+  'grpcio>=1.64.1',
+  'pandas>=1.5.3',
+  'protobuf>=4.25.3',
+  'tqdm>=4.65.0'
+]
+[project.urls]
+"Homepage" = "https://quantweb3.ai"

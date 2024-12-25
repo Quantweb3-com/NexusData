@@ -1,0 +1,91 @@
+// Copyright 2015 gRPC authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+option go_package = "qwdata/qwdata";
+option java_multiple_files = true;
+option java_package = "io.grpc.examples.qwdata";
+option java_outer_classname = "qwdataproto";
+
+package qwdata;
+
+service MarketDataService {
+  rpc SayHello (HelloRequest) returns (HelloReply) {}
+  rpc Auth(AuthRequest) returns (AuthResponse);
+  rpc FetchData (FetchDataRequest) returns (stream FetchDataResponse);
+}
+
+// The request message containing the user's name.
+message HelloRequest {
+  string name = 1;
+}
+
+// The response message containing the greetings
+message HelloReply {
+  string message = 1;
+}
+
+message AuthRequest {
+    string user = 1;
+    string token = 2;
+    string uuid = 3;
+}
+
+message AuthResponse {
+    bool success = 1;
+    string message = 2;
+    string temp_token = 3;
+}
+
+message FetchDataRequest {
+  string symbol = 1;
+  string asset_type = 2;
+  string data_type = 3;
+  string start = 4;
+  string end = 5;
+  string exchange = 6;
+  optional string tz = 7;
+  optional string timeframe = 8;
+  optional bool use_async = 9;
+  optional int64 batch_size=10;
+  string auth_token = 11;
+}
+
+message FetchDataResponse {
+  bool success = 1;
+  string message = 2;
+  bytes data = 3;
+
+}
+
+message MinuDataMessage {
+    int64 open_time = 1;
+    float open = 2;
+    float high = 3;
+    float low = 4;
+    float close = 5;
+    float volume = 6;
+    int64 close_time = 7;
+    double quote_volume = 8;
+    uint32 count = 9;
+    float taker_buy_volume = 10;
+    double taker_buy_quote_volume = 11;
+    uint32 ignore = 12;
+}
+
+message BatchMinuDataMessages {
+    // 使用 repeated 关键字来表示包含多个 MinuDataMessage 的数组
+    repeated MinuDataMessage data = 1;
+}
