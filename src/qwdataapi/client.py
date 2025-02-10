@@ -1,47 +1,54 @@
 import grpc
 import asyncio
 import warnings
+import ctypes
+import os
+from ctypes import c_char_p, c_int, POINTER
+import datetime
+from pathlib import Path
+from typing import Literal, Optional, List
 
 warnings.filterwarnings("ignore")
 from .proto.qwdata_pb2 import AuthRequest, FetchDataRequest, HelloRequest, MinuDataMessage, BatchMinuDataMessages
 from .proto.qwdata_pb2_grpc import MarketDataServiceStub
 import pandas as pd
-import time
 import snappy
 import tqdm
 import nest_asyncio
 
 nest_asyncio.apply()
-##pip install python-snappy
 
-# server_host = 'localhost:50051'
-server_host = '139.180.130.126:50051'
+# Server host configuration
+SERVER_HOST = '139.180.130.126:50051'
 
 
 def get_mac_address():
+    """Retrieve the MAC address of the machine."""
     import uuid
     mac = uuid.UUID(int=uuid.getnode()).hex[-12:].upper()
-    return '%s:%s:%s:%s:%s:%s' % (mac[0:2], mac[2:4], mac[4:6], mac[6:8], mac[8:10], mac[10:])
+    return ':'.join([mac[i:i + 2] for i in range(0, 12, 2)])
 
 
 async def anext(aiter):
+    """Async iterator next function."""
     return await aiter.__anext__()
 
 
-class qwClient(object):
+class QWClient:
     _auth_token = 'default'
     _instance = None
 
     @classmethod
     def instance(cls):
+        """Singleton pattern to ensure only one instance of the client exists."""
         if cls._instance is None:
-            cls._instance = qwClient()
+            cls._instance = QWClient()
         return cls._instance
 
     @classmethod
-    async def auth(cls, user, token):
-
-        async with grpc.aio.insecure_channel(server_host) as channel:
+    async def authenticate(cls, user, token):
+        """Authenticate the user with the server."""
+        async with grpc.aio.insecure_channel(SERVER_HOST) as channel:
             stub = MarketDataServiceStub(channel)
             uuid = get_mac_address()
             response = await stub.Auth(AuthRequest(user=user, token=token, uuid=uuid))
@@ -54,14 +61,16 @@ class qwClient(object):
     @classmethod
     async def fetch_data(cls, exchange='binance', symbol='BTCUSDT', asset_type='spot', data_type='klines',
                          start='2023-08-01 00:00:00', end='2024-07-17 00:00:00', batch_size=50):
-        def estimate_minutes(start, end):
-            start = pd.Timestamp(start)
-            end = pd.Timestamp(end)
-            # print(f'start: {start}, end: {end}')
-            # print(f'end - start: {end - start}.total_seconds() ')
-            return (end - start).total_seconds() / 60 + 24 * 60
+        """Fetch market data from the server."""
 
-        def get_minu_data_dict(data: MinuDataMessage):
+        def estimate_minutes(start_time, end_time):
+            """Estimate the number of minutes between two timestamps."""
+            start = pd.Timestamp(start_time)
+            end = pd.Timestamp(end_time)
+            return int((end - start).total_seconds() / 60) + 24 * 60
+
+        def parse_minu_data(data: MinuDataMessage):
+            """Parse a single minute data message into a dictionary."""
             return {
                 'open_time': data.open_time,
                 'open': data.open,
@@ -77,8 +86,8 @@ class qwClient(object):
                 'ignore': data.ignore,
             }
 
-        async with grpc.aio.insecure_channel(server_host) as channel:
-            client = MarketDataServiceStub(channel)
+        async with grpc.aio.insecure_channel(SERVER_HOST) as channel:
+            stub = MarketDataServiceStub(channel)
 
             try:
                 request = FetchDataRequest(
@@ -92,42 +101,40 @@ class qwClient(object):
                     data_type=data_type,
                 )
 
-                total_minutes = int(estimate_minutes(start, end))
-                pbar = tqdm.tqdm(total=total_minutes, desc='Fetching data')
-                datalist = []
+                total_minutes = estimate_minutes(start, end)
+                progress_bar = tqdm.tqdm(total=total_minutes, desc='Fetching data')
+                data_list = []
 
-                async for response in client.FetchData(request):
+                async for response in stub.FetchData(request):
                     if not response.success:
-                        print(f'\nError from server: {response.message}')
-                        return pd.DataFrame()  # 返回空DataFrame而不是None
+                        print(f'Error from server: {response.message}')
+                        return pd.DataFrame()
+
+                    if not response.data:
+                        print("Warning: Received empty data")
+                        continue
 
                     try:
-                        if not response.data:  # 检查数据是否为空
-                            print(f"Warning: Received empty data")
-                            continue
-
                         decompressed_data = snappy.uncompress(response.data)
-                        bdata = BatchMinuDataMessages()
-                        bdata.ParseFromString(decompressed_data)
+                        batch_data = BatchMinuDataMessages()
+                        batch_data.ParseFromString(decompressed_data)
 
-                        if bdata.data:  # 检查是否有数据
-                            datalist.extend(bdata.data)
-                            pbar.update(len(bdata.data))
+                        if batch_data.data:
+                            data_list.extend(batch_data.data)
+                            progress_bar.update(len(batch_data.data))
 
                     except snappy.UncompressError as e:
-                        print(f"解压缩错误: {e}")
-                        continue
+                        print(f"Decompression error: {e}")
                     except Exception as e:
-                        print(f"处理数据时出错: {e}")
-                        continue
+                        print(f"Error processing data: {e}")
 
-                pbar.close()
+                progress_bar.close()
 
-                if not datalist:  # 检查是否获取到任何数据
+                if not data_list:
                     print("Warning: No data received")
                     return pd.DataFrame()
 
-                data_dict = [get_minu_data_dict(data) for data in datalist]
+                data_dict = [parse_minu_data(data) for data in data_list]
                 df = pd.DataFrame(data_dict)
 
                 if df.empty:
@@ -139,19 +146,134 @@ class qwClient(object):
                 return df
 
             except grpc.RpcError as e:
-                print(f'gRPC错误: {e}')
+                print(f"gRPC error: {e}")
                 return pd.DataFrame()
             except Exception as e:
-                print(f'未知错误: {e}')
+                print(f"Unknown error: {e}")
                 return pd.DataFrame()
+
+    @classmethod
+    def store_data_locally(cls,
+                           tickers: Optional[List[str]] = None,
+                           start_time: Optional[datetime.datetime] = None,
+                           end_time: Optional[datetime.datetime] = None,
+                           max_tickers: int = 0,
+                           asset_class: Literal["spot", "cm", "um"] = "spot",
+                           data_type: str = "klines",
+                           data_frequency: Literal["1s", "1m", "3m", "5m", "15m", "30m",
+                           "1h", "2h", "4h", "6h", "8h", "12h",
+                           "1d", "3d", "1w", "1mo"] = "1m",
+                           store_dir: str = "./data"):
+        """Save fetched data to the local storage using the authenticated token."""
+
+        # Ensure the client is authenticated before saving data
+        if cls._auth_token == 'default':
+            raise RuntimeError("Client is not authenticated. Please authenticate first.")
+
+        if data_type not in MAP_DATA_TYPES_BY_ASSET[asset_class]:
+            raise ValueError(f"Data type {data_type} is not applicable for asset class {asset_class}")
+
+        current_dir = Path(__file__).parent
+        lib_dir = current_dir / "lib"
+        if os.name != "nt":
+            lib_path = lib_dir / "lib.so"
+        else:
+            lib_path = lib_dir / "lib.dll"
+        lib = ctypes.CDLL(str(lib_path))
+        lib.Dump.argtypes = [
+            c_char_p,  # assetClass
+            c_char_p,  # dataType
+            c_char_p,  # dataFrequency
+            POINTER(c_char_p),  # tickers
+            c_int,  # tickersLen
+            c_char_p,  # dateStart
+            c_char_p,  # dateEnd
+            c_int,  # maxTickers
+            c_char_p,  # token
+            c_int,  # timestamp
+            c_char_p  # storeDir
+        ]
+        lib.Dump.restype = c_char_p
+
+        def encode_string(s: Optional[str]) -> Optional[bytes]:
+            """Encode a string to bytes."""
+            return s.encode('utf-8') if s else None
+
+        def to_c_str_array(strings: List[str]) -> POINTER(c_char_p):
+            """Convert a list of strings to a C-style array of char pointers."""
+            arr = (c_char_p * len(strings))()
+            for i, s in enumerate(strings):
+                arr[i] = s.encode('utf-8')
+            return arr
+
+        tickers_arr = to_c_str_array(tickers) if tickers else (c_char_p * 0)()
+        result = lib.Dump(
+            encode_string(asset_class),
+            encode_string(data_type),
+            encode_string(data_frequency),
+            tickers_arr,
+            len(tickers) if tickers else 0,
+            encode_string(start_time.strftime('%Y-%m-%dT%H:%M:%SZ') if start_time else None),
+            encode_string(end_time.strftime('%Y-%m-%dT%H:%M:%SZ') if end_time else None),
+            max_tickers,
+            encode_string(cls._auth_token),  # Use the authenticated token
+            int(datetime.datetime.now().timestamp()),
+            encode_string(store_dir)
+        )
+        if result:
+            err_msg = ctypes.cast(result, c_char_p).value.decode('utf-8')
+            raise RuntimeError(f"Dump operation failed, error: {err_msg}")
+
+
+MAP_DATA_TYPES_BY_ASSET = {
+    "spot": ("aggTrades", "klines", "trades"),
+    "cm": (
+        "aggTrades",
+        "klines",
+        "trades",
+        "indexPriceKlines",
+        "markPriceKlines",
+        "premiumIndexKlines",
+    ),
+    "um": (
+        "aggTrades",
+        "klines",
+        "trades",
+        "indexPriceKlines",
+        "markPriceKlines",
+        "premiumIndexKlines",
+        "metrics",
+    ),
+}
 
 
 def auth(user, token):
-    return asyncio.run(qwClient.auth(user, token))
+    """Wrapper function to authenticate the user."""
+    return asyncio.run(QWClient.authenticate(user, token))
 
 
-def fetch_data(exchange='binance', symbol='BTCUSDT', asset_type='spot', data_type='klines', start='2023-08-01 00:00:00',
-               end='2024-07-17 00:00:00', batch_size=50):
+def fetch_data(exchange='binance', symbol='BTCUSDT', asset_type='spot', data_type='klines',
+               start='2023-08-01 00:00:00', end='2024-07-17 00:00:00', batch_size=50):
+    """Wrapper function to fetch market data."""
     return asyncio.run(
-        qwClient.fetch_data(exchange=exchange, symbol=symbol, asset_type=asset_type, data_type=data_type, start=start,
-                            end=end, batch_size=batch_size))
+        QWClient.fetch_data(exchange=exchange, symbol=symbol, asset_type=asset_type, data_type=data_type,
+                            start=start, end=end, batch_size=batch_size))
+
+
+def store_data_locally(
+        tickers: Optional[List[str]] = None,
+        start_time: Optional[datetime.datetime] = None,
+        end_time: Optional[datetime.datetime] = None,
+        max_tickers: int = 0,
+        asset_class: Literal["spot", "cm", "um"] = "spot",
+        data_type: str = "klines",
+        data_frequency: Literal[
+            "1s", "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1mo"] = "1m",
+        store_dir: str = "./data"
+):
+    """
+    Wrapper function to save data to local using the QWClient.
+    """
+    return QWClient.store_data_locally(tickers=tickers, start_time=start_time, end_time=end_time,
+                                       max_tickers=max_tickers, asset_class=asset_class, data_type=data_type,
+                                       data_frequency=data_frequency, store_dir=store_dir)
