@@ -11,9 +11,6 @@ from typing import Literal, Optional, List
 warnings.filterwarnings("ignore")
 from .proto.qwdata_pb2 import AuthRequest, FetchDataRequest, HelloRequest, MinuDataMessage, BatchMinuDataMessages
 from .proto.qwdata_pb2_grpc import MarketDataServiceStub
-import pandas as pd
-import snappy
-import tqdm
 import nest_asyncio
 
 nest_asyncio.apply()
@@ -59,111 +56,17 @@ class QWClient:
                 print(f"Authentication failed: {response.message}")
 
     @classmethod
-    async def fetch_data(cls, exchange='binance', symbol='BTCUSDT', asset_type='spot', data_type='klines',
-                         start='2023-08-01 00:00:00', end='2024-07-17 00:00:00', batch_size=50):
-        """Fetch market data from the server."""
-
-        def estimate_minutes(start_time, end_time):
-            """Estimate the number of minutes between two timestamps."""
-            start = pd.Timestamp(start_time)
-            end = pd.Timestamp(end_time)
-            return int((end - start).total_seconds() / 60) + 24 * 60
-
-        def parse_minu_data(data: MinuDataMessage):
-            """Parse a single minute data message into a dictionary."""
-            return {
-                'open_time': data.open_time,
-                'open': data.open,
-                'high': data.high,
-                'low': data.low,
-                'close': data.close,
-                'volume': data.volume,
-                'close_time': data.close_time,
-                'quote_volume': data.quote_volume,
-                'count': data.count,
-                'taker_buy_volume': data.taker_buy_volume,
-                'taker_buy_quote_volume': data.taker_buy_quote_volume,
-                'ignore': data.ignore,
-            }
-
-        async with grpc.aio.insecure_channel(SERVER_HOST) as channel:
-            stub = MarketDataServiceStub(channel)
-
-            try:
-                request = FetchDataRequest(
-                    exchange=exchange.lower(),
-                    symbol=symbol,
-                    asset_type=asset_type.lower(),
-                    start=start,
-                    end=end,
-                    auth_token=cls._auth_token,
-                    batch_size=batch_size,
-                    data_type=data_type,
-                )
-
-                total_minutes = estimate_minutes(start, end)
-                progress_bar = tqdm.tqdm(total=total_minutes, desc='Fetching data')
-                data_list = []
-
-                async for response in stub.FetchData(request):
-                    if not response.success:
-                        print(f'Error from server: {response.message}')
-                        return pd.DataFrame()
-
-                    if not response.data:
-                        print("Warning: Received empty data")
-                        continue
-
-                    try:
-                        decompressed_data = snappy.uncompress(response.data)
-                        batch_data = BatchMinuDataMessages()
-                        batch_data.ParseFromString(decompressed_data)
-
-                        if batch_data.data:
-                            data_list.extend(batch_data.data)
-                            progress_bar.update(len(batch_data.data))
-
-                    except snappy.UncompressError as e:
-                        print(f"Decompression error: {e}")
-                    except Exception as e:
-                        print(f"Error processing data: {e}")
-
-                progress_bar.close()
-
-                if not data_list:
-                    print("Warning: No data received")
-                    return pd.DataFrame()
-
-                data_dict = [parse_minu_data(data) for data in data_list]
-                df = pd.DataFrame(data_dict)
-
-                if df.empty:
-                    return df
-
-                df = df.set_index('open_time')
-                df.index = pd.to_datetime(df.index, unit='s')
-                df['close_time'] = pd.to_datetime(df['close_time'], unit='s')
-                return df
-
-            except grpc.RpcError as e:
-                print(f"gRPC error: {e}")
-                return pd.DataFrame()
-            except Exception as e:
-                print(f"Unknown error: {e}")
-                return pd.DataFrame()
-
-    @classmethod
-    def store_data_locally(cls,
-                           tickers: Optional[List[str]] = None,
-                           start_time: Optional[datetime.datetime] = None,
-                           end_time: Optional[datetime.datetime] = None,
-                           max_tickers: int = 0,
-                           asset_class: Literal["spot", "cm", "um"] = "spot",
-                           data_type: str = "klines",
-                           data_frequency: Literal["1s", "1m", "3m", "5m", "15m", "30m",
-                           "1h", "2h", "4h", "6h", "8h", "12h",
-                           "1d", "3d", "1w", "1mo"] = "1m",
-                           store_dir: str = "./data"):
+    def fetch_data(cls,
+                   tickers: Optional[List[str]] = None,
+                   start_time: Optional[datetime.datetime] = None,
+                   end_time: Optional[datetime.datetime] = None,
+                   max_tickers: int = 0,
+                   asset_class: Literal["spot", "cm", "um"] = "spot",
+                   data_type: str = "klines",
+                   data_frequency: Literal["1s", "1m", "3m", "5m", "15m", "30m",
+                   "1h", "2h", "4h", "6h", "8h", "12h",
+                   "1d", "3d", "1w", "1mo"] = "1m",
+                   store_dir: str = "./data"):
         """Save fetched data to the local storage using the authenticated token."""
 
         # Ensure the client is authenticated before saving data
@@ -252,15 +155,7 @@ def auth(user, token):
     return asyncio.run(QWClient.authenticate(user, token))
 
 
-def fetch_data(exchange='binance', symbol='BTCUSDT', asset_type='spot', data_type='klines',
-               start='2023-08-01 00:00:00', end='2024-07-17 00:00:00', batch_size=50):
-    """Wrapper function to fetch market data."""
-    return asyncio.run(
-        QWClient.fetch_data(exchange=exchange, symbol=symbol, asset_type=asset_type, data_type=data_type,
-                            start=start, end=end, batch_size=batch_size))
-
-
-def store_data_locally(
+def fetch_data(
         tickers: Optional[List[str]] = None,
         start_time: Optional[datetime.datetime] = None,
         end_time: Optional[datetime.datetime] = None,
@@ -274,6 +169,6 @@ def store_data_locally(
     """
     Wrapper function to save data to local using the QWClient.
     """
-    return QWClient.store_data_locally(tickers=tickers, start_time=start_time, end_time=end_time,
-                                       max_tickers=max_tickers, asset_class=asset_class, data_type=data_type,
-                                       data_frequency=data_frequency, store_dir=store_dir)
+    return QWClient.fetch_data(tickers=tickers, start_time=start_time, end_time=end_time,
+                               max_tickers=max_tickers, asset_class=asset_class, data_type=data_type,
+                               data_frequency=data_frequency, store_dir=store_dir)

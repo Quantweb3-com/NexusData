@@ -36,81 +36,73 @@ auth('your_username', 'your_token')
 ```
 
 2. Fetch Data
-
+Store the data in a local specified directory (csv format)
 ``` python
-df = fetch_data(
-symbol='BTCUSDT', # Trading pair
-start='2024-01-01 00:00:00' # Start time
-)
+fetch_data()
 ```
+### Advanced Usage
 
-3. View Data
+Fetch data with custom parameters
 
-``` python
-print(df.head())
-```
-4. Save data to local(csv)
-``` python
-store_data_locally(
+``` python 
+fetch_data(
     tickers=["BTCUSDT"],
     store_dir="./tmp/data",
     start_time=datetime.datetime(2021, 1, 1),
     end_time=datetime.datetime(2022, 1, 2),
     data_type="klines",
     data_frequency="1m",
-    asset_class="um")
-```
-
-### Advanced Usage
-
-Fetch data with custom parameters
-
-``` python 
-df = fetch_data(
-symbol='BTCUSDT', # Trading pair
-exchange='binance', # Exchange
-asset_type='spot', # Asset type: spot/futures
-start='2024-01-01 00:00:00', # Start time
-end='2024-01-02 00:00:00', # End time
-batch_size=50 # Batch size
+    asset_class="um"
 )
 ```
 
 #### Function Parameters 📋
 
-- **exchange** (`str`): The name of the exchange, defaults to `'binance'`.
-- **symbol** (`str`): The trading pair, for example `'BTCUSDT'`, defaults to `'BTCUSDT'`.
-- **asset_type** (`str`): The type of asset. Defaults to `'spot'` for spot trading. `'coinm'` represents coin-based
-  futures trading, while `'usdm'` represents USD-based futures trading.
-- **data_type** (`str`): The type of data. Defaults to `'klines'`, which represents candlestick data.
-- **start** (`str`): The start time of the data, formatted as `'YYYY-MM-DD HH:MM:SS'`, defaults to
-  `'2023-08-01 00:00:00'`.
-- **end** (`str`): The end time of the data, formatted the same as the start time, defaults to `'2024-07-17 00:00:00'`.
-- **batch_size** (`int`): The size of the data batch for each request, a number between 40 and 100, defaults to 50.
+- **tickers** (`list[str]`):  
+  A list of trading pairs to fetch data for.  
+  _Example_: `["BTCUSDT"]`.
 
-Save data
+- **store_dir** (`str`):  
+  The directory path where the fetched data will be stored.  
+  _Example_: `"./tmp/data"`.
 
-``` python
-df.to_csv('btc_data.csv')
-```
+- **start_time** (`datetime.datetime`):  
+  The starting timestamp for the data retrieval.  
+  _Example_: `datetime.datetime(2021, 1, 1)`.
+
+- **end_time** (`datetime.datetime`):  
+  The ending timestamp for the data retrieval.  
+  _Example_: `datetime.datetime(2022, 1, 2)`.
+
+- **data_type** (`str`):  
+  The type of data to fetch. Defaults to `"klines"`, which represents candlestick (OHLCV) data.
+
+- **data_frequency** (`str`):  
+  The frequency at which the data is sampled.  
+  _Example_: `"1m"` for one-minute intervals.
+
+- **asset_class** (`str`):  
+  The asset class identifier. For instance, `"um"` might indicate a specific market type.  
+  _Note_: The accepted values should be defined by your application context.
 
 ## Data Structure 📊
 
 The returned DataFrame contains the following columns:
 
-| Column                 | Description            |
-|------------------------|------------------------|
-| open_time              | Opening time (index)   |
-| open                   | Opening price          |
-| high                   | Highest price          |
-| low                    | Lowest price           |
-| close                  | Closing price          |
-| volume                 | Trading volume         |
-| close_time             | Closing time           |
-| quote_volume           | Quote currency volume  |
-| count                  | Number of trades       |
-| taker_buy_volume       | Taker buy volume       |
-| taker_buy_quote_volume | Taker buy quote volume |
+| Column                        | Description                                                                 |
+|-------------------------------|-----------------------------------------------------------------------------|
+| Open time                     | The moment when the candlestick period started.                           |
+| Open                          | The opening price for the period.                                          |
+| High                          | The highest price reached during the period.                               |
+| Low                           | The lowest price reached during the period.                                |
+| Close                         | The closing price at the end of the period.                                |
+| Volume                        | The total traded quantity during the period.                               |
+| Close time                    | The moment when the candlestick period ended.                              |
+| Quote asset volume            | The traded volume in terms of the quote asset during the period.           |
+| Number of trades              | The total number of trades executed during the period.                     |
+| Taker buy base asset volume   | The amount of the base asset bought by takers during the period.             |
+| Taker buy quote asset volume  | The amount of the quote asset used for taker buy orders during the period.   |
+| Ignore                        | A field reserved for future use and typically disregarded.                 |
 
 ## Authentication 🔑
 
@@ -128,46 +120,9 @@ The returned DataFrame contains the following columns:
 - **ZFX**: [Sign up](https://zfx.link/46dFByp)
 
 ## Examples 📝
-
-You can view the demo on Google Colab by
+* You can view the demo on Google Colab by
 clicking [here](https://colab.research.google.com/drive/1GiC43LmyWGk3S2xCmvLlGzW_1GrMgGyD?usp=sharing).
-
-### Fetch Bitcoin Daily Data and Plot
-
-``` python
-import pandas as pd
-import matplotlib.pyplot as plt
-from qwdataapi import auth, fetch_data
-```
-
-Authenticate
-
-``` python 
-auth('your_username', 'your_token')
-```
-
-Fetch data
-
-``` python 
-Fetch data
-df = fetch_data(
-symbol='BTCUSDT',
-start='2024-01-01',
-end='2024-01-07'
-)
-```
-
-Plot price chart
-
-```
-plt.figure(figsize=(15, 7))
-plt.plot(df.index, df['close'])
-plt.title('BTC/USDT Price')
-plt.xlabel('Time')
-plt.ylabel('Price')
-plt.grid(True)
-plt.show()
-```
+* You can also look at the [example](./example) folder in the directory
 
 ## Dependencies 📦
 
