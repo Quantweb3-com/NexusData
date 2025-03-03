@@ -1,19 +1,15 @@
-# QWDataAPI
+# NexusData
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue)
 ![Version](https://img.shields.io/badge/version-1.0.7-green)
 
-QWDataAPI is a powerful cryptocurrency market data fetching tool that provides high-quality historical and alternative
-data from [Quantweb3.ai](https://quantweb3.ai/).
+NexusData revolutionizes decentralized market analysis by transforming complex data workflows into a single line of code. Designed for traders and developers, our platform seamlessly aggregates high-fidelity coin spots/contracts bar data from top exchanges like Binance and OKX, delivering:
 
-## Features ✨
-
-- 🚀 High-performance data retrieval
-- 📊 Minute-level candlestick data
-- 💫 Support for major exchanges
-- 🔄 Asynchronous processing for large datasets
-- 📈 Complete market depth information
+- **Zero-Learning-Code**: Extract, clean, and structure raw data with one intuitive function
+- **Turbocharged Security**: Local data vaulting ensures enterprise-grade protection + sub-millisecond access
+- **Future-Proof Scalability:** Modular architecture primed for expanding exchange integrations 
+- **Trade smarter:** build faster – where simplicity meets institutional-grade data resilience.
 
 ## Quick Start 🚀
 
