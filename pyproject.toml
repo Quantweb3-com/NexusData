@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nexusdata"
-version = "1.0.9"
+version = "1.0.10"
 authors = [
   { name="Scott Zhang", email="scott2011@qq.com" },
 ]
@@ -26,3 +26,9 @@ dependencies = [
 ]
 [project.urls]
 "Homepage" = "https://quantweb3.ai"
+
+[tool.setuptools.package-data]
+"nexusdata" = ["lib/*"]
+
+[tool.setuptools]
+include-package-data = true

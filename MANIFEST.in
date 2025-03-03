@@ -1,1 +1,2 @@
 recursive-include src/qetrader *.proto
+recursive-include nexusdata/lib *
