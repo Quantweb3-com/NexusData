@@ -1,6 +1,6 @@
 import datetime
 
-from qwdataapi import auth, fetch_data
+from nexusdata import auth, fetch_data
 
 auth("quantweb3", "$pbkdf2$131000$U2NvdHQ$rrcEv/zhCQVXN94pWH/tH5FITEQ")
 

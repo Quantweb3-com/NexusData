@@ -16,13 +16,13 @@ NexusData revolutionizes decentralized market analysis by transforming complex d
 ### Installation
 
 ``` bash
-pip install qwdataapi
+pip install nexusdata
 ```
 
 ### Basic Usage
 
 ``` python
-from qwdataapi import auth, fetch_data
+from nexusdata import auth, fetch_data
 ```
 
 1. Authentication (Get credentials at https://quantweb3.ai/subscribe)
