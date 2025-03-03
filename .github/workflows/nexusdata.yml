@@ -4,17 +4,40 @@ on:
   push:
     tags:
       - 'v*'  # 当推送以 v 开头的 tag 时触发
+
 jobs:
   pypi-publish:
-    name: Upload release to PyPI
+    name: Publish to PyPI
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/nexusdata
+      url: https://pypi.org/project/nexusdata
     permissions:
-      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write  # 该权限对于受信任发布是必须的
     steps:
-    # retrieve your distributions here
+      # 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Publish package distributions to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+      # 设置 Python 环境（这里以最新的 3.x 版本为例）
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      # 安装构建工具
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      # 构建发行版（包括 sdist 和 wheel）
+      - name: Build distributions
+        run: python -m build --sdist --wheel .
+
+      # 发布分发版到 PyPI
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: quantweb3
+          password: ${{ secrets.PYPI_API_TOKEN }}
