@@ -104,7 +104,7 @@ struct GetLocalDirToData_return {
 extern struct GetLocalDirToData_return GetLocalDirToData(char* assetClass, char* dataType, char* dataFrequency, char* ticker, char* timePeriodPerFile, char* storeDir);
 extern char* DeleteOutdatedDailyResults(char* assetClass, char* dataType, char* dataFrequency, char* storeDir);
 extern StringArrayResult GetAllDatesWithDataForTicker(char* assetClass, char* dataType, char* dataFrequency, char* ticker, char* timePeriodPerFile, char* storeDir);
-extern char* Dump(char* assetClass, char* dataType, char* dataFrequency, char** tickers, int tickersLen, char* dateStart, char* dateEnd, int maxTickers, char* token, int timestamp, char* storeDir);
+extern char* Dump(char* assetClass, char* dataType, char* dataFrequency, char** tickers, int tickersLen, char* dateStart, char* dateEnd, int maxTickers, char* token, int timestamp, char* storeDir, char* platform);
 
 #ifdef __cplusplus
 }

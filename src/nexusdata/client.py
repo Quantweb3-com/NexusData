@@ -61,20 +61,50 @@ class QWClient:
                    start_time: Optional[datetime.datetime] = None,
                    end_time: Optional[datetime.datetime] = None,
                    max_tickers: int = 0,
-                   asset_class: Literal["spot", "cm", "um"] = "spot",
+                   asset_class: str = "spot",
                    data_type: str = "klines",
                    data_frequency: Literal["1s", "1m", "3m", "5m", "15m", "30m",
                    "1h", "2h", "4h", "6h", "8h", "12h",
                    "1d", "3d", "1w", "1mo"] = "1m",
-                   store_dir: str = "./data"):
+                   store_dir: str = "./data",
+                   platform: Literal["binance", "okx"] = "binance"
+                   ):
         """Save fetched data to the local storage using the authenticated token."""
+
+        # Platform-specific constraints
+        PLATFORM_CONFIG = {
+            "binance": {
+                "asset_classes": ["spot", "cm", "um"],
+                "data_types": {
+                    "spot": ["klines"],
+                    "cm": ["klines", "indexPriceKlines", "markPriceKlines", "premiumIndexKlines"],
+                    "um": ["klines", "indexPriceKlines", "markPriceKlines", "premiumIndexKlines"]
+                }
+            },
+            "okx": {
+                "asset_classes": ["spot", "swap", "future"],
+                "data_types": {
+                    "spot": ["klines", "trades", "aggtrades"],
+                    "swap": ["klines", "trades", "aggtrades", "swaprate"],
+                    "future": ["klines", "trades", "aggtrades"]
+                }
+            }
+        }
 
         # Ensure the client is authenticated before saving data
         if cls._auth_token == 'default':
             raise RuntimeError("Client is not authenticated. Please authenticate first.")
 
-        if data_type not in MAP_DATA_TYPES_BY_ASSET[asset_class]:
-            raise ValueError(f"Data type {data_type} is not applicable for asset class {asset_class}")
+        # Check platform-specific asset class constraints
+        if asset_class not in PLATFORM_CONFIG[platform]["asset_classes"]:
+            raise ValueError(f"Asset class '{asset_class}' is not valid for platform '{platform}'. "
+                             f"Valid options are: {PLATFORM_CONFIG[platform]['asset_classes']}")
+
+        # Check platform-specific data type constraints
+        if data_type not in PLATFORM_CONFIG[platform]["data_types"][asset_class]:
+            raise ValueError(
+                f"Data type '{data_type}' is not valid for platform '{platform}' with asset class '{asset_class}'. "
+                f"Valid options are: {PLATFORM_CONFIG[platform]['data_types'][asset_class]}")
 
         current_dir = Path(__file__).parent
         lib_dir = current_dir / "lib"
@@ -94,7 +124,8 @@ class QWClient:
             c_int,  # maxTickers
             c_char_p,  # token
             c_int,  # timestamp
-            c_char_p  # storeDir
+            c_char_p,  # storeDir
+            c_char_p  # platform
         ]
         lib.Dump.restype = c_char_p
 
@@ -109,6 +140,10 @@ class QWClient:
                 arr[i] = s.encode('utf-8')
             return arr
 
+        # store_dir = store_dir + platform
+        # Normalize the path by removing trailing slashes
+        store_dir = Path(store_dir).as_posix().rstrip('/')
+        store_dir = f"{store_dir}/{platform}"
         tickers_arr = to_c_str_array(tickers) if tickers else (c_char_p * 0)()
         result = lib.Dump(
             encode_string(asset_class),
@@ -121,7 +156,8 @@ class QWClient:
             max_tickers,
             encode_string(cls._auth_token),  # Use the authenticated token
             int(datetime.datetime.now().timestamp()),
-            encode_string(store_dir)
+            encode_string(store_dir),
+            encode_string(platform)
         )
         if result:
             err_msg = ctypes.cast(result, c_char_p).value.decode('utf-8')
@@ -160,15 +196,16 @@ def fetch_data(
         start_time: Optional[datetime.datetime] = None,
         end_time: Optional[datetime.datetime] = None,
         max_tickers: int = 0,
-        asset_class: Literal["spot", "cm", "um"] = "spot",
+        asset_class: str = "spot",
         data_type: str = "klines",
         data_frequency: Literal[
             "1s", "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1mo"] = "1m",
-        store_dir: str = "./data"
+        store_dir: str = "./data",
+        platform: Literal["binance", "okx"] = "binance"
 ):
     """
     Wrapper function to save data to local using the QWClient.
     """
     return QWClient.fetch_data(tickers=tickers, start_time=start_time, end_time=end_time,
                                max_tickers=max_tickers, asset_class=asset_class, data_type=data_type,
-                               data_frequency=data_frequency, store_dir=store_dir)
+                               data_frequency=data_frequency, store_dir=store_dir, platform=platform)
